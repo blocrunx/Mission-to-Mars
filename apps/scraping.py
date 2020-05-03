@@ -18,8 +18,10 @@ def scrape_all():
       "news_paragraph": news_paragraph,
       "featured_image": featured_image(browser),
       "facts": mars_facts(),
-      "last_modified": dt.datetime.now()
+      "last_modified": dt.datetime.now(),
+      "pole_images": chal_images(browser)
    }
+   return data
 
 # Path to chromedriver
 # executable_path = {'executable_path': 'chromedriver'}
@@ -103,11 +105,55 @@ def mars_facts():
         return None    
 
     # Assign columns and set index of dataframe    
-    df.columns=['Description', 'Mars', 'Earth']
+    df.columns=['Description', 'Value']
     df.set_index('Description', inplace=True)
     
     # Convert dataframe into HTML format, add bootstrap
     return df.to_html()
+
+
+
+def chal_images(browser):
+    #browser = Browser("chrome", executable_path="chromedriver", headless=False)
+    # Visit URL
+    url = 'https://astrogeology.usgs.gov/search/results?q=hemisphere+enhanced&k1=target&v1=Mars'
+    browser.visit(url)
+
+    html = browser.html
+    chal_soup = BeautifulSoup(html, 'html.parser')
+
+    image_list = []
+    some_list = []
+    
+    for a in chal_soup.find_all('a', href=True):
+        some_list.append(a['href'])
+
+    test = 'map/Mars'
+    thumb_list =  []
+    for list_item in some_list:
+        if (test in list_item) and (list_item not in thumb_list):
+            thumb_list.append(list_item)
+    # build urls
+    image_list = []
+    for address in thumb_list:
+        
+        # Navigate to the page where image src is located
+        target_url = f'https://astrogeology.usgs.gov{address}'
+        browser.visit(target_url)
+        html = browser.html
+        
+        # Parse soup to locate src
+        current_soup = BeautifulSoup(html, 'html.parser')
+        relative_image_url = current_soup.find('img', {'class':'wide-image'}).get('src')
+        
+        # Combine relative url with base to get full image url
+        full_image_url = f'https://astrogeology.usgs.gov{relative_image_url}'
+
+        # Add complete url to list of urls
+        image_list.append(full_image_url)
+    
+    return image_list
+        
 
 if __name__ == "__main__":
     # If running as script, print scraped data
